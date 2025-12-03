@@ -1,0 +1,8 @@
+This app is still in development. The app is only launched to showcase to a customer.
+
+Things to work on:
+
+- Foutmelding genereren voor twee bestanden met zelfde projectnaam
+- Nederlandse/vastelandse csv-formaat en toggle fixen
+- Onzinnige toelichtingen weghalen
+- stroomlijnen script
