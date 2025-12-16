@@ -4,13 +4,10 @@ Gebaseerd op VanSpecificatieNaarBewakingscodeUren_correct.py
 
 import streamlit as st
 import pandas as pd
-import numpy as np
-from pathlib import Path
-import tempfile
-import os
 import io
 import warnings
 warnings.filterwarnings('ignore')
+
 
 # Set page config
 st.set_page_config(
@@ -56,21 +53,31 @@ with st.sidebar:
 # Vertaaltabel (bewakingscode mapping)
 vertaaltabel = pd.DataFrame({
     'specificatiecode': [
-        "020CAL", "035FRE", "040CON", "050BIE", "055ORD", 
-        "060SEL", "070LAT", "080OPK", "090SPU", "100AFM", 
-        "110GLZ", "AFM", "085VMO"
+        "020CAL", "035FRE", "040CON", "050BIE", 
+        "055ORD", "060SEL", "070LAT", "080OPK", 
+        "090SPU", "100AFM", "110GLZ", "AFM", 
+        "085VMO"
     ],
     'Omschrijving': [
         "Afkorten en calibreren", "Frezen", "Conturex", "Biesse", 
-        "Opsluite ramen/deuren", "Select", "Afkort/ProfielContr Lat", 
-        "opsluiten kozijnen", "Spuiten", "Afmontage", 
-        "Glaszetten (extern)", "afmonteren", "Voormontage/glaslatten"
+        "Opsluite ramen/deuren", "Select", "Afkort/ProfielContr Lat", "opsluiten kozijnen",
+        "Spuiten", "Afmontage", "Glaszetten (extern)", "afmonteren", 
+        "Voormontage/glaslatten"
     ],
     'bewakingscode': [
-        "K601", "K601", "K602", "K608", "K603", "K608", "K603", 
-        "K603", "K604", "K605", None, "K605", "K603"
+        "K601", "K601", "K602", "K608", 
+        "K603", "K608", "K603", "K603", 
+        "K604", "K605", None, "K605",
+        "K603"
+    ],
+    'bewakingomschrijving': [
+        "Machinale", "Machinale","Conturex","Biesse en Select", 
+        "Opsluiten, Voormontage, Afkort/profiel/contr lat","Biesse en Select", "Opsluiten, Voormontage, Afkort/profiel/contr lat","Opsluiten, Voormontage, Afkort/profiel/contr lat", 
+        "Spuiten","Afmontage",None,"Afmontage",
+        "Opsluiten, Voormontage, Afkort/profiel/contr lat"
     ]
 })
+
 
 # File uploader
 uploaded_files = st.file_uploader(
@@ -80,6 +87,10 @@ uploaded_files = st.file_uploader(
     help="Selecteer één of meerdere CSV-bestanden"
 )
 
+
+# Lijst die projectcodes bijhoudt om duplicaten te detecteren
+processed_project_codes = []
+
 if uploaded_files:
     st.subheader("📁 Geüploade Bestanden")
     st.write(f"Aantal bestanden: {len(uploaded_files)}")
@@ -88,7 +99,9 @@ if uploaded_files:
     alle_data_lijst = []
     niet_behandeld = []
     verwerkings_log = []
-    
+    # Duplicate detection
+    processed_project_codes = []
+
     # Process each file
     progress_bar = st.progress(0)
     status_text = st.empty()
@@ -108,35 +121,54 @@ if uploaded_files:
             
             for encoding in encodings_to_try:
                 try:
-                    # Decode the entire file with this encoding
-                    content = file_bytes.decode(encoding)
-                    lines = content.split('\n')
-                    
-                    # Get project code from first line
-                    if lines and ';' in lines[0]:
-                        project_code_vlak = lines[0].strip().split(';')[0]
-                    else:
-                        project_code_vlak = lines[0].strip() if lines else "Onbekend"
-                    
-                    # Skip first 3 lines and read CSV
-                    csv_content = '\n'.join(lines[3:])
+                    # Read file bytes directly with skiprows
                     data = pd.read_csv(
-                        io.StringIO(csv_content),
+                        io.BytesIO(file_bytes),
                         sep=';',
-                        decimal=','
+                        decimal=',',
+                        encoding=encoding,
+                        skiprows=3,
+                        on_bad_lines='warn'
                     )
                     used_encoding = encoding
+                    
+                    # Extract project code from first line
+                    content = file_bytes.decode(encoding, errors='ignore')
+                    first_line = content.split('\n')[0] if '\n' in content else content
+                    if ';' in first_line:
+                        project_code_vlak = first_line.strip().split(';')[0]
+                    else:
+                        project_code_vlak = first_line.strip()
+                    
+                    
+                    project_code_clean = project_code_vlak.replace('SPECIFICATIE UREN van project: ', '')
+                
+                    if project_code_clean in processed_project_codes:
+                        verwerkings_log.append(f"[WAARSCHUWING] {uploaded_file.name}: Projectcode {project_code_clean} is al eerder verwerkt. Bestand wordt overgeslagen.")
+                        niet_behandeld.append(uploaded_file.name)
+                        # Skip naar volgend bestand
+                        data = None  # Zorg dat data None blijft
+                        break  # Break uit de encoding-loop
                     break
-                except (UnicodeDecodeError, pd.errors.ParserError):
+                except (UnicodeDecodeError, pd.errors.ParserError, pd.errors.EmptyDataError):
                     continue
             
-            if data is None:
-                raise ValueError("Kon CSV niet lezen met ondersteunde encodings")
+            if data is None or data.empty:
+                raise ValueError("Kon CSV niet lezen met ondersteunde encodings of bestand is leeg")
+
             
             # Check if second column is 'Omschrijving'
             if len(data.columns) >= 2 and data.columns[1] == 'Omschrijving':
                 # Add project code as column
                 data['project'] = project_code_vlak
+
+                # Add to project names list for duplicate detection
+                processed_project_codes.append(project_code_clean)
+                
+                # Process immediately to reduce memory usage
+                if len(alle_data_lijst) > 0 and len(data.columns) != len(alle_data_lijst[0].columns):
+                    # Ensure column consistency
+                    st.warning(f"Kolommen verschillen in {uploaded_file.name}")
                 
                 # Add to list
                 alle_data_lijst.append(data)
@@ -218,13 +250,13 @@ if uploaded_files:
             
             # Group and aggregate
             uren_per_bewakingscode = data_met_bewakingscode.groupby(
-                ['bewakingscode', 'projectcode']
+                ['bewakingomschrijving', 'projectcode']
             )[uren_kolom].sum().reset_index()
             
             # Pivot the table
             uren_pivot = uren_per_bewakingscode.pivot_table(
                 index='projectcode',
-                columns='bewakingscode',
+                columns='bewakingomschrijving',
                 values=uren_kolom,
                 aggfunc='sum',
                 fill_value=0
@@ -277,12 +309,10 @@ if uploaded_files:
         
         with col2:
             # Also provide Excel format
-            excel_buffer = pd.ExcelWriter("uren_per_bewakingscode.xlsx", engine='openpyxl')
-            uren_pivot.to_excel(excel_buffer, index=False, sheet_name='Resultaten')
-            excel_buffer.close()
-            
-            with open("uren_per_bewakingscode.xlsx", "rb") as f:
-                excel_data = f.read()
+            excel_buffer = io.BytesIO()
+            with pd.ExcelWriter(excel_buffer, engine='openpyxl') as writer:
+                uren_pivot.to_excel(writer, index=False, sheet_name='Resultaten')
+            excel_data = excel_buffer.getvalue()
             
             st.download_button(
                 label="📥 Download Excel",
@@ -290,6 +320,7 @@ if uploaded_files:
                 file_name="uren_per_bewakingscode.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             )
+        
         
         # Show hours per bewakingscode
         st.subheader("📈 Uren per Bewakingscode (Totaal)")
