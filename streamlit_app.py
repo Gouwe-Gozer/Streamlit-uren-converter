@@ -360,4 +360,4 @@ with st.expander("🔍 Bekijk Vertaaltabel (Specificatiecode → Bewakingscode)"
 
 # Footer
 st.markdown("---")
-st.caption("Versie 1.03 - duplicate detectie toegevoegd - 16-12-2025")
+st.caption("Versie 1.04 - Switchen tussen comma en semicolon-separated gefixt - 16-12-2025")
