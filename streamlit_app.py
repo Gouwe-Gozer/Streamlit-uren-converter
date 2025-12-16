@@ -45,8 +45,8 @@ with st.sidebar:
     
     st.header("⚙️ Instellingen")
     output_format = st.radio(
-        "Uitvoerformaat:",
-        ["Nederlands (puntkomma)", "Engels (komma)"],
+        "Uitvoerformaat voor CSV:",
+        ["Nederlands (puntkomma)", "Engels/Amerikaans (komma)"],
         index=0
     )
 
@@ -290,12 +290,12 @@ if uploaded_files:
         
         # Convert to CSV strings
         if output_format == "Nederlands (puntkomma)":
-            csv_data = uren_pivot.to_csv(sep=';', index=False, encoding='utf-8')
+            csv_data = uren_pivot.to_csv(sep=';', decimal=',', index=False, encoding='utf-8')
             file_name = "uren_per_bewakingscode.csv"
             mime_type = "text/csv"
         else:
-            csv_data = uren_pivot.to_csv(index=False, encoding='utf-8')
-            file_name = "eng_uren_per_bewakingscode.csv"
+            csv_data = uren_pivot.to_csv(sep=',', decimal='.', index=False, encoding='utf-8')
+            file_name = "UK_US_uren_per_bewakingscode.csv"
             mime_type = "text/csv"
         
         col1, col2 = st.columns(2)
