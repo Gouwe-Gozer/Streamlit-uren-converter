@@ -342,8 +342,9 @@ class StreamlitUI:
         """Renders app header"""
         st.title(f"{self.config.PAGE_ICON} {self.config.PAGE_TITLE} Converter")
         st.markdown("""
-        Deze app converteert specificatie-uren CSV-bestanden naar een overzicht per bewakingscode.
-        Upload één of meerdere CSV-bestanden met de juiste opmaak.
+        Deze app converteert Groeneveld specificatie-uren csv-bestanden naar één overzicht met uren per bewakingscode per project.
+        Upload één of meerdere CSV-bestanden met de juiste opmaak en download het resultaat in Excel of CSV-formaat.
+        Raadpleeg de Vertaaltabel onderaan voor de mapping van specificatiecodes naar bewakingscodes.
         """)
     
     def render_sidebar(self) -> str:
@@ -351,7 +352,22 @@ class StreamlitUI:
         with st.sidebar:
             st.header("📋 Instructies")
             st.markdown("""
-            **Bestandsformaat:**
+            Het vereiste inputbestandsformaat volgt de conventies van de specificatie-uren export uit Groeneveldsoftware (zie kopje Vereist bestandsformaat).
+                        
+            De app ondersteunt export in Excel of CSV-formaat, waarbij de CSV-export zowel een Nederlands (puntkomma) als een Engels/Amerikaans (komma) formaat aanbiedt.
+            Voor een Nederlands Office-pakket is het Nederlandse formaat vereist.
+            """)
+
+            st.header("⚙️ Instellingen")
+            output_format = st.radio(
+                "Uitvoerformaat voor CSV:",
+                ["Nederlands (puntkomma)", "Engels/Amerikaans (komma)"],
+                index=0
+            )
+            st.markdown("---")
+            st.markdown(""" 
+                                  
+            **Vereist bestandsformaat:**
             - CSV-bestand met puntkomma als scheidingsteken
             - Eerste regel: `SPECIFICATIE UREN van project: [projectnummer]`
             - Data start op regel 4
@@ -367,12 +383,7 @@ class StreamlitUI:
             ```
             """)
             
-            st.header("⚙️ Instellingen")
-            output_format = st.radio(
-                "Uitvoerformaat voor CSV:",
-                ["Nederlands (puntkomma)", "Engels/Amerikaans (komma)"],
-                index=0
-            )
+
             
             return output_format
     
@@ -380,7 +391,7 @@ class StreamlitUI:
         """Renders file uploader widget"""
         return st.file_uploader(
             "Upload CSV-bestanden",
-            type=['csv', 'CSV'],
+            type=['csv'],
             accept_multiple_files=True,
             help="Selecteer één of meerdere CSV-bestanden"
         )
