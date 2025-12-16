@@ -67,7 +67,7 @@ vertaaltabel = pd.DataFrame({
         "Glaszetten (extern)", "afmonteren", "Voormontage/glaslatten"
     ],
     'bewakingscode': [
-        "K601", "K601", "K602", "K601", "K603", "K601", "K603", 
+        "K601", "K601", "K602", "K608", "K603", "K608", "K603", 
         "K603", "K604", "K605", None, "K605", "K603"
     ]
 })
