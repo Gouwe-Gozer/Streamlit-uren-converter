@@ -66,20 +66,17 @@ TRANSLATION_TABLE = pd.DataFrame({
 # FUNCTIONS
 # ============================================================================
 
-# Helper function of read_csv_file
+# Helper function to extract the project code
 def _extract_project_code(file_bytes: bytes, encoding: str) -> str:
-    """Extracts project code from first line of file (Excel cell A1)"""
+    """Read_csv_file helper function. Extracts project code from first line of file (Excel cell A1)"""
     # Decode file
     content = file_bytes.decode(encoding, errors='ignore')
-    # Get first line (\n separates rows in raw content) ## MWIJNAN 20251219 Unnecessary: split(';')[0] can also be directly applied on content
-    first_line = content.split('\n')[0] if '\n' in content else content
-    # From first row, get first cell (; separates columns in semicolon CSVs)
-    project_code_raw = first_line.strip().split(';')[0]
+    # Get the first value in the csv
+    project_code_raw = content.strip().split('\n')[0]
     
     return project_code_raw
 
 
-# Reads CSV file with multiple encoding fallbacks and extracts project code
 def read_csv_file(file_bytes: bytes) -> tuple[Optional[pd.DataFrame], Optional[str]]:
     """Reads CSV file and returns DataFrame and project code. Project code is extracted from first line.
     Data starts after SKIP_ROWS number of rows."""
