@@ -20,6 +20,7 @@ VERSION = "2.11 - WIP- 30-01-2026"
 # CSV parsing settings
 CSV_SEPARATOR = ';'
 DECIMAL_SEPARATOR = ','
+THOUSANDS_SEPARATOR = '.'
 SKIP_ROWS = 3
 ENCODING = 'cp1252'   #, 'latin-1', 'iso-8859-1', 'utf-8']
 # -- The project code shares its cell with this line of text
@@ -28,9 +29,9 @@ PROJECT_PREFIX = 'SPECIFICATIE UREN van project: '
 # Column names
 COL_DESCRIPTION = 'Omschrijving'
 COL_SPECIFICATION = 'specificatiecode'
-COL_PROJECT_CODE = 'projectcode'
-COL_MONITORING_CODE = 'bewakingscode'
-COL_MONITORING_DESC = 'bewakingomschrijving'
+COL_PROJECT_CODE = 'Project_Key'
+COL_MONITORING_CODE = 'Bewakingscode'
+COL_MONITORING_DESC = 'Bewakingscode_omschrijving'
 
 # Translation table
 # -- Regrouping from specificatie- to bewakingscode occurs based on this table
@@ -61,6 +62,13 @@ TRANSLATION_TABLE = pd.DataFrame({
     ]
 })
 
+# To allow for easier renaming of columns let translation table use the constants mapping
+TRANSLATION_TABLE = TRANSLATION_TABLE.rename(columns={
+    'specificatiecode': COL_SPECIFICATION,           # e.g., 'Specificatiecode'
+    'bewakingscode': COL_MONITORING_CODE,            # e.g., 'Bewakingscode'  
+    'bewakingomschrijving': COL_MONITORING_DESC      # e.g., 'Bewakingsomschrijving'
+})
+
 # ============================================================================
 # FUNCTIONS
 # ============================================================================
@@ -83,6 +91,7 @@ def read_csv_file(file_bytes: bytes) -> tuple[Optional[pd.DataFrame], Optional[s
         io.BytesIO(file_bytes),
         sep=CSV_SEPARATOR,
         decimal=DECIMAL_SEPARATOR,
+        thousands=THOUSANDS_SEPARATOR,
         encoding=ENCODING,
         skiprows=SKIP_ROWS,
         on_bad_lines='warn'
@@ -212,7 +221,7 @@ def Aggregate_hours_by_bewaking(combined_data: pd.DataFrame) -> pd.DataFrame:
     if hours_col is None:
         raise ValueError("Geen uren kolom gevonden in de data")
     
-    # Filter rows with monitoring code
+    # Filter rows with monitoring code ## !!! MWIJNAN 20260130 Specificaties met missende bewakingscode worrden hier weggefilterd !!!
     data_with_code = data[data[COL_MONITORING_CODE].notna()].copy()
     
     # Ensure hours are numeric
@@ -268,10 +277,11 @@ def Aggregate_costs_by_bewaking(combined_data: pd.DataFrame) -> pd.DataFrame:
     
     # Group and aggregate
     costs_per_code = data_with_code.groupby(
-        [COL_MONITORING_DESC, COL_PROJECT_CODE]
+        [COL_MONITORING_CODE, COL_PROJECT_CODE]
     )[costs_col].sum().reset_index()
     
-    
+    costs_per_code = costs_per_code.rename(columns={costs_col: "Kostprijs"})
+
     return costs_per_code
 
 
@@ -324,7 +334,7 @@ def render_processing_log(results: List[dict]):
             status = "[OK]" if result['success'] else "[ERROR]" if "overgeslagen" not in result['message'] else "[WAARSCHUWING]"
             st.write(f"{status} {result['filename']}: {result['message']}")
 
-def render_results(df: pd.DataFrame, output_format: str):
+def render_results(df: pd.DataFrame, output_format: str, df2: pd.DataFrame):
     """Renders results section with metrics and data"""
     st.subheader("📊 Resultaten")
     
@@ -342,16 +352,16 @@ def render_results(df: pd.DataFrame, output_format: str):
     st.dataframe(df, use_container_width=True)
     
     # Download buttons
-    render_download_buttons(df, output_format)
+    render_download_buttons(df, output_format,df2)
     
     # Additional statistics
     render_statistics(df)
 
-def render_download_buttons(df: pd.DataFrame, output_format: str):
+def render_download_buttons(df: pd.DataFrame, output_format: str, df2: pd.DataFrame):
     """Renders download buttons for results"""
     st.subheader("📥 Download Resultaten")
     
-    col1, col2 = st.columns(2)
+    col1, col2, col3 = st.columns(3)
     
     with col1:
         if output_format == "Nederlands (puntkomma)":
@@ -362,7 +372,7 @@ def render_download_buttons(df: pd.DataFrame, output_format: str):
             file_name = "UK_US_uren_per_bewakingscode.csv"
         
         st.download_button(
-            label="📥 Download CSV",
+            label="📥 Download uren planning CSV",
             data=csv_data,
             file_name=file_name,
             mime="text/csv"
@@ -374,9 +384,21 @@ def render_download_buttons(df: pd.DataFrame, output_format: str):
             df.to_excel(writer, index=False, sheet_name='Resultaten')
         
         st.download_button(
-            label="📥 Download Excel",
+            label="📥 Download uren planning Excel",
             data=buffer.getvalue(),
             file_name="uren_per_bewakingscode.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+    
+    with col3:
+        buffer = io.BytesIO()
+        with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
+            df2.to_excel(writer, index=False, sheet_name='Resultaten')
+        
+        st.download_button(
+            label="📥 Power BI Export Excel",
+            data=buffer.getvalue(),
+            file_name="Groeneveld_kosten_per_bewakingscode.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
 
@@ -473,10 +495,12 @@ def main():
             st.write(f"Totaal aantal rijen: {len(combined_data)}")
             
             with st.spinner("Data aan het verwerken..."):
-                result_df = Aggregate_hours_by_bewaking(combined_data)
+                hours_df = Aggregate_hours_by_bewaking(combined_data)
+                costs_df = Aggregate_costs_by_bewaking(combined_data)
             
             # Display results
-            render_results(result_df, output_format)
+            render_results(hours_df, output_format, costs_df)
+
         else:
             st.warning("Geen geldige bestanden gevonden om te verwerken.")
             failed_files = [r['filename'] for r in results if not r['success']]
