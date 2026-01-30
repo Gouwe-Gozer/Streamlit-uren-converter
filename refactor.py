@@ -29,7 +29,8 @@ PROJECT_PREFIX = 'SPECIFICATIE UREN van project: '
 # Column names
 COL_DESCRIPTION = 'Omschrijving'
 COL_SPECIFICATION = 'specificatiecode'
-COL_PROJECT_CODE = 'Project_Key'
+COL_PROJECT_CODE = 'Projectcode'
+COL_MAINPROJECT_CODE = 'Project_Key'
 COL_MONITORING_CODE = 'Bewakingscode'
 COL_MONITORING_DESC = 'Bewakingscode_omschrijving'
 
@@ -175,6 +176,14 @@ def process_uploaded_file(uploaded_file, processed_projects: set) -> dict:
         
         # Clean project code and check for duplicates
         project_code_clean = project_code_raw.replace(PROJECT_PREFIX, '')
+
+        # Check for semicolons in project code (indicates processing error)
+        if ';' in project_code_clean:
+            return {
+                'success': False,
+                'filename': filename,
+                'message': f"Projectcode '{project_code_clean}' bevat puntkomma's. Bestand is na exporteren uit Groeneveld bewerkt in Excel en kan daardoor niet verwerkt worden."
+            }
         
         if project_code_clean in processed_projects:
             return {
@@ -276,6 +285,9 @@ def Aggregate_costs_by_bewaking(combined_data: pd.DataFrame) -> pd.DataFrame:
     # Filter rows with monitoring code
     data_with_code = data[data[COL_MONITORING_CODE].notna()].copy()
     
+    # Create COL_MAINPROJECT_CODE by removing suffixes like /2, B, X, etc.
+    data_with_code[COL_MAINPROJECT_CODE] = data_with_code[COL_PROJECT_CODE].astype(str).str.extract(r'^(\d+)', expand=False)
+    
     # Ensure costs are numeric
     data_with_code[costs_col] = pd.to_numeric(
         data_with_code[costs_col], errors='coerce'
@@ -283,7 +295,7 @@ def Aggregate_costs_by_bewaking(combined_data: pd.DataFrame) -> pd.DataFrame:
     
     # Group and aggregate
     costs_per_code = data_with_code.groupby(
-        [COL_MONITORING_CODE, COL_PROJECT_CODE]
+        [COL_MONITORING_CODE, COL_PROJECT_CODE, COL_MAINPROJECT_CODE]
     )[costs_col].sum().reset_index()
     
     costs_per_code = costs_per_code.rename(columns={costs_col: "Kostprijs"})
