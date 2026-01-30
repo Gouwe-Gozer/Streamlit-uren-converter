@@ -13,7 +13,7 @@ warnings.filterwarnings('ignore')
 # CONSTANTS AND CONFIGURATION
 # ============================================================================
 
-PAGE_TITLE = "Specificatiecodeconverter voor Groeneveld exports"
+PAGE_TITLE = "Gevelconcept Specificatie naar Bewakingscode"
 PAGE_ICON = "🪟"
 VERSION = "2.1 - Functionaliteit Feitentabel Power BI-genereren toegevoegd 30-01-2026"
 
@@ -497,7 +497,8 @@ def main():
     st.title(f"{PAGE_ICON} {PAGE_TITLE} Converter")
     st.markdown("""
     Deze app converteert Groeneveld specificatie-uren csv-bestanden naar één overzicht met uren per bewakingscode per project.
-    Upload één of meerdere CSV-bestanden met de juiste opmaak en download het resultaat in Excel of CSV-formaat.
+    Upload één of meerdere CSV-bestanden met de juiste opmaak en download het resultaat in Excel of CSV-formaat. De app genereert
+    tevens een Excel-bestand geschikt voor Power BI met de kosten per bewakingscode per project.
     Raadpleeg de Vertaaltabel onderaan voor de mapping van specificatiecodes naar bewakingscodes.
     """)
     
