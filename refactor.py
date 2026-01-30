@@ -15,13 +15,13 @@ warnings.filterwarnings('ignore')
 
 PAGE_TITLE = "Specificatie Uren naar Bewakingscode"
 PAGE_ICON = "📊"
-VERSION = "2.1 - Reduced abstratction/simplification refactor- 19-12-2025"
+VERSION = "2.11 - WIP- 30-01-2026"
 
 # CSV parsing settings
 CSV_SEPARATOR = ';'
 DECIMAL_SEPARATOR = ','
 SKIP_ROWS = 3
-ENCODINGS = ['cp1252', 'latin-1', 'iso-8859-1', 'utf-8']
+ENCODING = 'cp1252'   #, 'latin-1', 'iso-8859-1', 'utf-8']
 # -- The project code shares its cell with this line of text
 PROJECT_PREFIX = 'SPECIFICATIE UREN van project: '
 
@@ -63,33 +63,11 @@ TRANSLATION_TABLE = pd.DataFrame({
 })
 
 # ============================================================================
-# HELPER FUNCTIONS
+# FUNCTIONS
 # ============================================================================
 
-def read_csv_file(file_bytes: bytes) -> tuple[Optional[pd.DataFrame], Optional[str]]:
-    """Attempts to read CSV file with multiple encoding fallbacks as I was unsure of the encoding used"""
-    for encoding in ENCODINGS:
-        try:
-            data = pd.read_csv(
-                io.BytesIO(file_bytes),
-                sep=CSV_SEPARATOR,
-                decimal=DECIMAL_SEPARATOR,
-                encoding=encoding,
-                skiprows=SKIP_ROWS,
-                on_bad_lines='warn'
-            )
-            
-            # Extract project code from first line
-            project_code = extract_project_code(file_bytes, encoding)
-            
-            return data, project_code
-            
-        except (UnicodeDecodeError, pd.errors.ParserError, pd.errors.EmptyDataError):
-            continue
-    
-    return None, None
-
-def extract_project_code(file_bytes: bytes, encoding: str) -> str:
+# Helper function of read_csv_file
+def _extract_project_code(file_bytes: bytes, encoding: str) -> str:
     """Extracts project code from first line of file (Excel cell A1)"""
     # Decode file
     content = file_bytes.decode(encoding, errors='ignore')
@@ -100,7 +78,32 @@ def extract_project_code(file_bytes: bytes, encoding: str) -> str:
     
     return project_code_raw
 
-def validate_csv_format(data: pd.DataFrame) -> bool:
+
+# Reads CSV file with multiple encoding fallbacks and extracts project code
+def read_csv_file(file_bytes: bytes) -> tuple[Optional[pd.DataFrame], Optional[str]]:
+    """Reads CSV file and returns DataFrame and project code. Project code is extracted from first line.
+    Data starts after SKIP_ROWS number of rows."""
+    
+    data = pd.read_csv(
+        io.BytesIO(file_bytes),
+        sep=CSV_SEPARATOR,
+        decimal=DECIMAL_SEPARATOR,
+        encoding=ENCODING,
+        skiprows=SKIP_ROWS,
+        on_bad_lines='warn'
+    )
+            
+    # Extract project code from first line
+    project_code = _extract_project_code(file_bytes, ENCODING)
+    
+    return data, project_code
+
+
+
+
+
+# Helper function of process_uploaded_file
+def _validate_csv_format(data: pd.DataFrame) -> bool:
     """Validates that the CSV has the expected format"""
     if data is None or data.empty:
         return False
@@ -110,6 +113,8 @@ def validate_csv_format(data: pd.DataFrame) -> bool:
     
     return data.columns[1] == COL_DESCRIPTION
 
+
+# Reads first line to extract project code and does basic validation
 def process_uploaded_file(uploaded_file, processed_projects: set) -> dict:
     """Processes a single uploaded file and returns result dictionary"""
     filename = uploaded_file.name
@@ -126,7 +131,7 @@ def process_uploaded_file(uploaded_file, processed_projects: set) -> dict:
             }
         
         # Validate format
-        if not validate_csv_format(data):
+        if not _validate_csv_format(data):
             col_name = data.columns[1] if len(data.columns) >= 2 else 'geen tweede kolom'
             return {
                 'success': False,
@@ -171,7 +176,10 @@ def process_uploaded_file(uploaded_file, processed_projects: set) -> dict:
             'message': f"Fout - {str(e)}"
         }
 
-def transform_data(combined_data: pd.DataFrame) -> pd.DataFrame:
+
+
+
+def Aggregate_hours_by_bewaking(combined_data: pd.DataFrame) -> pd.DataFrame:
     """Transforms raw data into aggregated monitoring code hours"""
     # Move project column to first position
     cols = [COL_PROJECT] + [col for col in combined_data.columns if col != COL_PROJECT]
@@ -229,10 +237,17 @@ def transform_data(combined_data: pd.DataFrame) -> pd.DataFrame:
     # Rename columns to add '_uren' suffix
     new_columns = [COL_PROJECT_CODE]
     for col in hours_pivot.columns[1:]:
-        new_columns.append(f"{col}_uren")
+        new_columns.append(col) 
     hours_pivot.columns = new_columns
     
     return hours_pivot
+
+
+
+
+# ============================================================================
+# STREAMLIT RENDERING FUNCTIONS
+# ============================================================================
 
 def render_sidebar():
     """Renders sidebar and returns selected output format"""
@@ -428,7 +443,7 @@ def main():
             st.write(f"Totaal aantal rijen: {len(combined_data)}")
             
             with st.spinner("Data aan het verwerken..."):
-                result_df = transform_data(combined_data)
+                result_df = Aggregate_hours_by_bewaking(combined_data)
             
             # Display results
             render_results(result_df, output_format)
@@ -439,7 +454,7 @@ def main():
                 st.error("De volgende bestanden konden niet worden verwerkt:")
                 for filename in failed_files:
                     st.write(f"- {filename}")
-                st.info("Controleer of de bestanden het juiste formaat hebben (zie instructies in de sidebar).")
+                st.info("Controleer of de bestanden het juiste formaat hebben (zie instructies in het verwerkingslogboek).")
     
     # Show translation table
     with st.expander("🔍 Bekijk Vertaaltabel (Specificatiecode → Bewakingscode)"):
