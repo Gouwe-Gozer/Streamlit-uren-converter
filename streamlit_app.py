@@ -13,8 +13,8 @@ warnings.filterwarnings('ignore')
 # CONSTANTS AND CONFIGURATION
 # ============================================================================
 
-PAGE_TITLE = "Specificatie Uren naar Bewakingscode"
-PAGE_ICON = "📊"
+PAGE_TITLE = "Specificatiecodeconverter voor Groeneveld exports"
+PAGE_ICON = "🪟"
 VERSION = "2.1 - Functionaliteit Feitentabel Power BI-genereren toegevoegd 30-01-2026"
 
 # CSV parsing settings
@@ -328,7 +328,7 @@ def Aggregate_costs_by_bewaking(combined_data: pd.DataFrame) -> pd.DataFrame:
 def render_sidebar():
     """Renders sidebar and returns selected output format"""
     with st.sidebar:
-        st.header("📋 Instructies")
+        st.header("Instructies")
         st.markdown("""
         Het vereiste inputbestandsformaat volgt de conventies van de specificatie-uren export uit Groeneveldsoftware.
                     
@@ -412,7 +412,7 @@ def render_results(df: pd.DataFrame, output_format: str, df2: pd.DataFrame):
 
 def _render_download_buttons(df: pd.DataFrame, output_format: str, df2: pd.DataFrame):
     """Renders download buttons for results"""
-    st.subheader("📥 Download Resultaten")
+    st.subheader("Download Resultaten")
     
     col1, col2, col3 = st.columns(3)
     
@@ -457,7 +457,7 @@ def _render_download_buttons(df: pd.DataFrame, output_format: str, df2: pd.DataF
 
 def _render_statistics(df: pd.DataFrame):
     """Renders statistics table"""
-    st.subheader("📈 Uren per Bewakingscode (Totaal)")
+    st.subheader("Uren per Bewakingscode (Totaal)")
     
     totals = []
     for col in df.columns[1:]:
@@ -476,7 +476,7 @@ def _render_statistics(df: pd.DataFrame):
     
     # Simple visualization
     if not totals_df.empty:
-        st.subheader("📊 Visualisatie")
+        st.subheader("Visualisatie")
         chart_data = totals_df.set_index('Bewakingscode')
         st.bar_chart(chart_data)
 
