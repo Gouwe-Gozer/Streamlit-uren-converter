@@ -28,7 +28,6 @@ PROJECT_PREFIX = 'SPECIFICATIE UREN van project: '
 # Column names
 COL_DESCRIPTION = 'Omschrijving'
 COL_SPECIFICATION = 'specificatiecode'
-COL_PROJECT = 'project'
 COL_PROJECT_CODE = 'projectcode'
 COL_MONITORING_CODE = 'bewakingscode'
 COL_MONITORING_DESC = 'bewakingomschrijving'
@@ -66,7 +65,6 @@ TRANSLATION_TABLE = pd.DataFrame({
 # FUNCTIONS
 # ============================================================================
 
-# Helper function to extract the project code
 def _extract_project_code(file_bytes: bytes, encoding: str) -> str:
     """Read_csv_file helper function. Extracts project code from first line of file (Excel cell A1)"""
     # Decode file
@@ -99,9 +97,9 @@ def read_csv_file(file_bytes: bytes) -> tuple[Optional[pd.DataFrame], Optional[s
 
 
 
-# Helper function of process_uploaded_file
+
 def _validate_csv_format(data: pd.DataFrame) -> bool:
-    """Validates that the CSV has the expected format"""
+    """Helper function of process_uploaded_file. Validates that the CSV has the expected format"""
     if data is None or data.empty:
         return False
     
@@ -111,9 +109,25 @@ def _validate_csv_format(data: pd.DataFrame) -> bool:
     return data.columns[1] == COL_DESCRIPTION
 
 
-# Reads first line to extract project code and does basic validation
+def _prepare_uploaded_data(data: pd.DataFrame, project_code_clean: str) -> pd.DataFrame:
+    """Helper function of process_uploaded_file. Standardizes raw CSV data for downstream processing."""
+    # 1. Add cleaned project code
+    data[COL_PROJECT_CODE] = project_code_clean
+    
+    # 2. Move project column to first position
+    cols = [COL_PROJECT_CODE] + [col for col in data.columns if col != COL_PROJECT_CODE]
+    data = data[cols].copy()
+    
+    # 3. Rename first column if needed
+    first_col = data.columns[1]  # Column 1 (0-indexed) after moving project to front
+    if first_col != COL_SPECIFICATION:
+        data = data.rename(columns={first_col: COL_SPECIFICATION})
+    
+    return data
+
+
 def process_uploaded_file(uploaded_file, processed_projects: set) -> dict:
-    """Processes a single uploaded file and returns result dictionary"""
+    """Processes a single uploaded file and returns result dictionary. Performs basic validation and data cleaning."""
     filename = uploaded_file.name
     
     try:
@@ -127,7 +141,7 @@ def process_uploaded_file(uploaded_file, processed_projects: set) -> dict:
                 'message': "Kon CSV niet lezen met ondersteunde encodings of bestand is leeg"
             }
         
-        # Validate format
+        
         if not _validate_csv_format(data):
             col_name = data.columns[1] if len(data.columns) >= 2 else 'geen tweede kolom'
             return {
@@ -136,12 +150,12 @@ def process_uploaded_file(uploaded_file, processed_projects: set) -> dict:
                 'message': f"Ongeldig formaat (tweede kolom is niet '{COL_DESCRIPTION}', gevonden: {col_name})"
             }
         
-        # Check if project code contains the required prefix
+        
         if not project_code_raw.startswith(PROJECT_PREFIX):
             return {
                 'success': False,
                 'filename': filename,
-                'message': f"Ongeldig formaat. De gevonden waarde '{project_code_raw}' betreft geen projectcode."
+                'message': f"Onverwachte waarde op A1. De gevonden waarde '{project_code_raw}' betreft geen projectcode."
             }
         
         # Clean project code and check for duplicates
@@ -154,14 +168,16 @@ def process_uploaded_file(uploaded_file, processed_projects: set) -> dict:
                 'message': f"Projectcode {project_code_clean} is al eerder verwerkt. Bestand wordt overgeslagen."
             }
         
-        # Add project code to data
-        data[COL_PROJECT] = project_code_raw
+        #  Standardize and clean data for downstream processing
+        data = _prepare_uploaded_data(data, project_code_clean)
+        
+        # Mark project as processed
         processed_projects.add(project_code_clean)
         
         return {
             'success': True,
             'filename': filename,
-            'message': f"Succesvol verwerkt (Project: {project_code_raw})",
+            'message': f"Succesvol verwerkt (Project: {project_code_clean})",
             'data': data,
             'project_code': project_code_raw
         }
@@ -177,23 +193,10 @@ def process_uploaded_file(uploaded_file, processed_projects: set) -> dict:
 
 
 def Aggregate_hours_by_bewaking(combined_data: pd.DataFrame) -> pd.DataFrame:
-    """Transforms raw data into aggregated monitoring code hours"""
-    # Move project column to first position
-    cols = [COL_PROJECT] + [col for col in combined_data.columns if col != COL_PROJECT]
-    data = combined_data[cols].copy()
-    
-    # Clean project code
-    data[COL_PROJECT_CODE] = data[COL_PROJECT].str.replace(PROJECT_PREFIX, '', regex=False)
-    data = data.drop(columns=[COL_PROJECT])
-    
-    # Rename first column to specificatiecode
-    first_col = data.columns[0]
-    if first_col != COL_SPECIFICATION:
-        data = data.rename(columns={first_col: COL_SPECIFICATION})
-    
+    """Transforms raw data into aggregated bewakingscode hours for planning purposes."""
     # Merge with translation table
     data = pd.merge(
-        data,
+        combined_data,
         TRANSLATION_TABLE,
         on=COL_SPECIFICATION,
         how='left'
@@ -231,15 +234,45 @@ def Aggregate_hours_by_bewaking(combined_data: pd.DataFrame) -> pd.DataFrame:
         fill_value=0
     ).reset_index()
     
-    # Rename columns to add '_uren' suffix
-    new_columns = [COL_PROJECT_CODE]
-    for col in hours_pivot.columns[1:]:
-        new_columns.append(col) 
-    hours_pivot.columns = new_columns
-    
     return hours_pivot
 
 
+
+def Aggregate_costs_by_bewaking(combined_data: pd.DataFrame) -> pd.DataFrame:
+    """Transforms raw data into aggregated bewakingscode costs for dashboarding purposes."""
+    # Merge with translation table
+    data = pd.merge(
+        combined_data,
+        TRANSLATION_TABLE,
+        on=COL_SPECIFICATION,
+        how='left'
+    )
+    
+    # Find costs column
+    costs_col = None
+    for col in data.columns:
+        if 'Loon' in col:
+            costs_col = col
+            break
+    
+    if costs_col is None:
+        raise ValueError("Geen kosten kolom gevonden in de data")
+    
+    # Filter rows with monitoring code
+    data_with_code = data[data[COL_MONITORING_CODE].notna()].copy()
+    
+    # Ensure costs are numeric
+    data_with_code[costs_col] = pd.to_numeric(
+        data_with_code[costs_col], errors='coerce'
+    ).fillna(0)
+    
+    # Group and aggregate
+    costs_per_code = data_with_code.groupby(
+        [COL_MONITORING_DESC, COL_PROJECT_CODE]
+    )[costs_col].sum().reset_index()
+    
+    
+    return costs_per_code
 
 
 # ============================================================================
