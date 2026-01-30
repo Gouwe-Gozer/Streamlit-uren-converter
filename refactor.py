@@ -257,6 +257,24 @@ def Aggregate_hours_by_bewaking(combined_data: pd.DataFrame) -> pd.DataFrame:
         aggfunc='sum',
         fill_value=0
     ).reset_index()
+
+    # Reorder
+    order = [
+        COL_PROJECT_CODE,
+        'Machinale',
+        'Conturex',
+        'Biesse en Select',
+        'Opsluiten, Voormontage, Afkort/profiel/contr lat',
+        'Spuiten',
+        'Afmontage',
+        'Kantoor / werkvoorbereiding',
+        'Glaslatten/Plak Roeden',
+        'Afkorten en calibreren'
+    ]
+    
+    # Reorder columns (only include columns that exist)
+    existing_cols = [col for col in order if col in hours_pivot.columns]
+    hours_pivot = hours_pivot[existing_cols]
     
     return hours_pivot
 
@@ -346,18 +364,32 @@ def render_sidebar():
         return output_format
 
 def render_processing_log(results: List[dict]):
-    """Renders processing log"""
+    """Renders processing log with filtering options"""
     with st.expander("📋 Verwerkingslogboek", expanded=True):
+        # Add filter checkbox
+        show_only_errors = st.checkbox("Toon alleen fouten en waarschuwingen", value=False)
+        
+        # Display results
+        filtered_count = 0
         for result in results:
             status = "[OK]" if result['success'] else "[ERROR]" if "overgeslagen" not in result['message'] else "[WAARSCHUWING]"
+            
+            # Apply filter
+            if show_only_errors and status == "[OK]":
+                continue
+            
+            filtered_count += 1
             st.write(f"{status} {result['filename']}: {result['message']}")
+        
+        if show_only_errors and filtered_count == 0:
+            st.info("Geen fouten of waarschuwingen gevonden.")
 
 def render_results(df: pd.DataFrame, output_format: str, df2: pd.DataFrame):
     """Renders results section with metrics and data"""
     st.subheader("📊 Resultaten")
     
     # Summary metrics
-    col1, col2, col3 = st.columns(3)
+    col1, col2, col3, col4 = st.columns(4)
     with col1:
         st.metric("Aantal projecten", len(df))
     with col2:
@@ -365,17 +397,20 @@ def render_results(df: pd.DataFrame, output_format: str, df2: pd.DataFrame):
     with col3:
         total_hours = df.iloc[:, 1:].sum().sum()
         st.metric("Totaal aantal uren", f"{total_hours:.2f}")
+    with col4:
+        total_costs = df2['Kostprijs'].sum()
+        st.metric("Totale arbeidskosten", f"€ {total_costs:,.2f}")
     
     # Data table
     st.dataframe(df, use_container_width=True)
     
     # Download buttons
-    render_download_buttons(df, output_format,df2)
+    _render_download_buttons(df, output_format,df2)
     
     # Additional statistics
-    render_statistics(df)
+    _render_statistics(df)
 
-def render_download_buttons(df: pd.DataFrame, output_format: str, df2: pd.DataFrame):
+def _render_download_buttons(df: pd.DataFrame, output_format: str, df2: pd.DataFrame):
     """Renders download buttons for results"""
     st.subheader("📥 Download Resultaten")
     
@@ -420,18 +455,21 @@ def render_download_buttons(df: pd.DataFrame, output_format: str, df2: pd.DataFr
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
 
-def render_statistics(df: pd.DataFrame):
+def _render_statistics(df: pd.DataFrame):
     """Renders statistics table"""
     st.subheader("📈 Uren per Bewakingscode (Totaal)")
     
     totals = []
     for col in df.columns[1:]:
         total_hours = df[col].sum()
-        code_name = col.replace('_uren', '')
-        totals.append({
-            'Bewakingscode': code_name,
-            'Totaal Uren': total_hours
-        })
+        # Only add if total hours > 0
+        if total_hours > 0:
+            totals.append({
+                'Bewakingscode': col,
+                'Totaal Uren': total_hours
+            })
+    
+    totals_df = pd.DataFrame(totals)
     
     totals_df = pd.DataFrame(totals)
     st.dataframe(totals_df, use_container_width=True)
@@ -439,7 +477,8 @@ def render_statistics(df: pd.DataFrame):
     # Simple visualization
     if not totals_df.empty:
         st.subheader("📊 Visualisatie")
-        st.bar_chart(totals_df.set_index('Bewakingscode'))
+        chart_data = totals_df.set_index('Bewakingscode')
+        st.bar_chart(chart_data)
 
 # ============================================================================
 # MAIN APP
