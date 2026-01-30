@@ -1,50 +1,31 @@
 # Specificatie Uren naar Bewakingscode Converter
 
-Dit project bevat twee tools voor het converteren van specificatie-uren CSV-bestanden naar een overzicht per bewakingscode.
+Dit project bevat een online tool voor het converteren van specificatie-uren CSV-bestanden uit Groeneveld Software naar een overzicht per bewakingscode. Daarnaast wordt op basis van de loonkosten een feitentabel gemaakt van kostprijsbedrag per bewaking om te gebruiken in Power BI.
 
-## 1. Origineel Python Script
-
-### Bestandsnaam
-`VanSpecificatieNaarBewakingscodeUren_correct.py`
-
-### Gebruik
-```bash
-python VanSpecificatieNaarBewakingscodeUren_correct.py
-```
-
-### Vereisten
-- Python 3.7+
-- Vereiste packages:
-  ```bash
-  pip install pandas numpy
-  ```
-
-### Functie
-- Leest CSV-bestanden uit de map `specificatieuren/`
-- Verwerkt alleen bestanden met het juiste formaat:
-  - Eerste regel: `SPECIFICATIE UREN van project: [projectnummer]`
-  - Data start op regel 4
-  - Tweede kolom moet 'Omschrijving' heten
-- Genereert twee output bestanden:
-  - `uren_per_bewakingscode.csv` (Nederlands formaat, puntkomma)
-  - `eng_uren_per_bewakingscode.csv` (Engels formaat, komma)
-
-## 2. Streamlit Web App
+## 1. Streamlit Web App
 
 ### Bestandsnaam
+
 `streamlit_app.py`
 
 ### Gebruik
+
+De app is beschikbaar op de volgende url: https://app-uren-converter.streamlit.app/. Daarnaast kan de app ook op je localhost gerund worden. Typ hiervoor het volgende in je command prompt:
+
 ```bash
 streamlit run streamlit_app.py
 ```
 
 ### Vereisten
-```bash
-pip install -r requirements.txt
+
+Typ het volgende in je command prompt:
+
+```conda
+conda install --file requirements.txt
 ```
 
 ### Functies
+
 - **Web-based interface** voor eenvoudig gebruik
 - **Drag-and-drop upload** van CSV-bestanden
 - **Real-time verwerking** met voortgangsindicatie
@@ -52,8 +33,10 @@ pip install -r requirements.txt
 - **Visualisaties** van uren per bewakingscode
 - **Download opties** in CSV en Excel formaat
 - **Nederlandse en Engelse** output formaten
+- **Export van feitentabel arbeidskosten planning** voor gebruik in data modellen
 
-### Screenshots
+### Interface
+
 1. Upload interface met instructies
 2. Verwerkingslogboek
 3. Resultaten overzicht
@@ -63,6 +46,7 @@ pip install -r requirements.txt
 ## Bestandsformaat Vereisten
 
 ### Geldig CSV formaat:
+
 ```
 SPECIFICATIE UREN van project: 225028
 [tweede regel]
@@ -72,23 +56,6 @@ SPECIFICATIE UREN van project: 225028
 035FRE;Frezen;0,68;0,01;;0,01;39,71;0,45
 ...
 ```
-
-### Vertaaltabel (Specificatiecode → Bewakingscode)
-| Specificatiecode | Omschrijving | Bewakingscode |
-|------------------|--------------|---------------|
-| 020CAL | Afkorten en calibreren | K601 |
-| 035FRE | Frezen | K601 |
-| 040CON | Conturex | K602 |
-| 050BIE | Biesse | K601 |
-| 055ORD | Opsluite ramen/deuren | K603 |
-| 060SEL | Select | K601 |
-| 070LAT | Afkort/ProfielContr Lat | K603 |
-| 080OPK | opsluiten kozijnen | K603 |
-| 090SPU | Spuiten | K604 |
-| 100AFM | Afmontage | K605 |
-| 110GLZ | Glaszetten (extern) | None |
-| AFM | afmonteren | K605 |
-| 085VMO | Voormontage/glaslatten | K603 |
 
 ## Installatie
 
@@ -104,25 +71,27 @@ SPECIFICATIE UREN van project: 225028
 
 ## Output Voorbeeld
 
-### CSV Output:
+### Uren planning Output:
+
 ```csv
-projectcode;K601_uren;K602_uren;K603_uren;K604_uren;K605_uren
-225028;77.96;127.78;280.94;78.40;155.62
-225310;10.22;28.48;54.18;9.68;24.04
+Projectcode;Machinale;Conturex;Biesse en Select;Opsluiten, Voormontage, Afkort/profiel/contr lat;Spuiten;Afmontage;Glaslatten/Plak Roeden
+"255340A";35,94;151,29;4,97;202,96999999999997;33,54;125,03999999999999;0,0
+"255437";0,42000000000000004;0,24;0,0;0,58;0,27;0,7;0,0
+```
+
+## Power BI feitentabel Output:
+
+```csv
+Bewakingscode, Projectcode, Project_Key, Kostprijs
+K605, 255340A, 255340, 131.82
+K602, 253117, 253117, 13.04
 ```
 
 ## Troubleshooting
 
 ### Veelvoorkomende problemen:
-1. **Encoding errors**: De app probeert automatisch verschillende encodings (UTF-8, Latin-1, CP1252)
+
+1. **Bestand handmatig bewerkt voor verwerking in app**: De kolommen worden niet goed herkent
+   wanneer er handmatig gewerkt is in het bestand.
 2. **Verkeerd formaat**: Bestanden zonder de juiste header worden genegeerd
 3. **Dubbele bestanden**: Het script voorkomt nu dubbele verwerking
-4. **Unicode tekens**: Gebruikt nu ASCII-vriendelijke symbolen in plaats van Unicode
-
-## Licentie
-
-Vrij te gebruiken voor intern bedrijfsgebruik.
-
-## Contact
-
-Voor vragen of problemen, raadpleeg de ontwikkelaar van het originele script.
