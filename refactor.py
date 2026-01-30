@@ -40,25 +40,31 @@ TRANSLATION_TABLE = pd.DataFrame({
         "020CAL", "035FRE", "040CON", "050BIE", 
         "055ORD", "060SEL", "070LAT", "080OPK", 
         "090SPU", "100AFM", "110GLZ", "AFM", 
-        "085VMO"
+        "085VMO", "030BMH", "BOGL", "CAL", 
+        "KA-WVO", "OVM"
     ],
     'Omschrijving': [
         "Afkorten en calibreren", "Frezen", "Conturex", "Biesse", 
         "Opsluite ramen/deuren", "Select", "Afkort/ProfielContr Lat", "opsluiten kozijnen",
         "Spuiten", "Afmontage", "Glaszetten (extern)", "afmonteren", 
-        "Voormontage/glaslatten"
+        "Voormontage/glaslatten", "Profiel/Verbind kozijnh.", "Boren glaslatten", "Calibreren",
+        "Kantoor werkvoorbereiding", " Overige machines"
     ],
     'bewakingscode': [
         "K601", "K601", "K602", "K608", 
         "K603", "K608", "K603", "K603", 
         "K604", "K605", None, "K605",
-        "K603"
+        "K603","K603","K010", "K201",
+        "K607","K601"
+
     ],
     'bewakingomschrijving': [
         "Machinale", "Machinale","Conturex","Biesse en Select", 
         "Opsluiten, Voormontage, Afkort/profiel/contr lat","Biesse en Select", "Opsluiten, Voormontage, Afkort/profiel/contr lat","Opsluiten, Voormontage, Afkort/profiel/contr lat", 
         "Spuiten","Afmontage",None,"Afmontage",
-        "Opsluiten, Voormontage, Afkort/profiel/contr lat"
+        "Opsluiten, Voormontage, Afkort/profiel/contr lat","Opsluiten, Voormontage, Afkort/profiel/contr lat","Glaslatten/Plak Roeden","Afkorten en calibreren",
+        "Kantoor / werkvoorbereiding","Machinale"
+
     ]
 })
 
