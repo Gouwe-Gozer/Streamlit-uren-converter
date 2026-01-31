@@ -1,6 +1,6 @@
 # Specificatie Uren naar Bewakingscode Converter
 
-Dit project bevat een online tool voor het converteren van specificatie-uren CSV-bestanden uit Groeneveld Software naar een overzicht per bewakingscode. Daarnaast wordt op basis van de loonkosten een feitentabel gemaakt van kostprijsbedrag per bewaking om te gebruiken in Power BI.
+Dit project bevat een online tool voor het converteren van specificatie-uren CSV-bestanden uit Groeneveld-software naar een overzicht per bewakingscode. Daarnaast wordt op basis van de loonkosten een feitentabel gemaakt van kostprijsbedrag per bewaking om te gebruiken in Power BI.
 
 ## 1. Streamlit Web App
 
