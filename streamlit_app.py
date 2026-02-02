@@ -55,7 +55,7 @@ TRANSLATION_TABLE = pd.DataFrame({
         "K601", "K601", "K602", "K608", 
         "K603", "K608", "K603", "K603", 
         "K604", "K605", None, "K605",
-        "K603","K603","K010", "K201",
+        "K603","K603","K603", "K601",
         "K607","K601"
 
     ],
@@ -63,7 +63,7 @@ TRANSLATION_TABLE = pd.DataFrame({
         "Machinale", "Machinale","Conturex","Biesse en Select", 
         "Opsluiten, Voormontage, Afkort/profiel/contr lat","Biesse en Select", "Opsluiten, Voormontage, Afkort/profiel/contr lat","Opsluiten, Voormontage, Afkort/profiel/contr lat", 
         "Spuiten","Afmontage",None,"Afmontage",
-        "Opsluiten, Voormontage, Afkort/profiel/contr lat","Opsluiten, Voormontage, Afkort/profiel/contr lat","Glaslatten/Plak Roeden","Afkorten en calibreren",
+        "Opsluiten, Voormontage, Afkort/profiel/contr lat","Opsluiten, Voormontage, Afkort/profiel/contr lat","Opsluiten, Voormontage, Afkort/profiel/contr lat","Machinale",
         "Kantoor / werkvoorbereiding","Machinale"
 
     ]
